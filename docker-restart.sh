@@ -1,5 +1,5 @@
 #!/bin/bash
-#git pull
+git pull
 echo `docker ps`
 echo 'Starting rebuild containers'
 #docker-compose down
