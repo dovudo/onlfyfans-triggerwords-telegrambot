@@ -8,6 +8,8 @@ plugins {
 group = "org.example"
 version = ""
 
+apply(plugin = "kotlin")
+
 repositories {
     mavenCentral()
 }
@@ -41,7 +43,7 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "19"
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 application {

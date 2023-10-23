@@ -1,8 +1,5 @@
-
 import org.telegram.telegrambots.meta.TelegramBotsApi
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
-
-
 
     fun main(args: Array<String>) {
         println("Starting the bot ...")

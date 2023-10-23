@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class AdminBot : TelegramLongPollingBot("6940251964:AAHhzwSLxNacxncdltsYyxkdWu1hr6MPc-w") {
+class AdminBot : TelegramLongPollingBot("6860199290:AAG0Co2whIh_yXOmduk50kLx8sce7BpB8XE") {
 
     // База данных для хранения админов
     val adminsKeysMap = mutableMapOf<Long, String>()
@@ -18,6 +18,7 @@ class AdminBot : TelegramLongPollingBot("6940251964:AAHhzwSLxNacxncdltsYyxkdWu1h
     private val userResponses: MutableMap<Long, String> = mutableMapOf()
     private val defaultTriggerWords = "http whatsapp whatapp https :// snapchat ".split(",", ", ", " ", ";", "; ")
     private val helpInfoTextFile = File("helpText.txt")
+
     override fun onUpdateReceived(update: Update) {
 
         if (update.hasMessage()) {
