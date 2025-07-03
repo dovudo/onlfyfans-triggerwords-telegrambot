@@ -81,4 +81,4 @@ node_modules/
 # Application specific
 helpText.txt
 *.token
-config.properties
+config.propertiesuser_settings.json
