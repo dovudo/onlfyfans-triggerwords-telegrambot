@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       - JAVA_OPTS=-Xmx512m -Xms256m
+      - TELEGRAM_BOT_TOKEN=6860199290:AAG0Co2whIh_yXOmduk50kLx8sce7BpB8XE
     volumes:
       - ./logs:/app/logs
     networks:

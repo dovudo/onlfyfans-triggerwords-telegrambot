@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.9.22"
     application
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "org.example"
@@ -59,5 +60,12 @@ application {
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+// Ensure the JAR manifest includes the main class for Docker/java -jar
+tasks.withType<Jar> {
+    manifest {
+        attributes("Main-Class" to "MainKt")
     }
 }

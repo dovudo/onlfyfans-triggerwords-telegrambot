@@ -1,24 +1,28 @@
-# Используем официальный образ OpenJDK 17
-FROM eclipse-temurin:17-jre-alpine
-
-# Устанавливаем рабочую директорию
+# ---- Build Stage ----
+FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 
-# Копируем JAR файл
-COPY build/libs/onlyfans-telegram-bot-1.0.0.jar app.jar
+# Copy Gradle wrapper and build files
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
 
-# Создаем пользователя для безопасности
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
+# Copy source code
+COPY src src
 
-# Меняем владельца файлов
-RUN chown -R appuser:appgroup /app
+# Build the fat JAR
+RUN ./gradlew shadowJar --no-daemon
 
-# Переключаемся на пользователя
-USER appuser
+# ---- Run Stage ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
 
-# Открываем порт (если потребуется)
-EXPOSE 8080
+# Copy the fat JAR from the build stage
+COPY --from=build /app/build/libs/onlyfans-telegram-bot-1.0.0-all.jar app.jar
 
-# Запускаем приложение
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Set environment variable for Java options (optional)
+ENV JAVA_OPTS=""
+
+# Run the application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
