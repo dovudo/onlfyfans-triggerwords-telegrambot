@@ -1,12 +1,12 @@
 # Gradle
-.gradle/
-build/
+/gradle/
+/build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
 # IntelliJ IDEA
-.idea/
+/.idea/
 *.iws
 *.iml
 *.ipr
@@ -36,7 +36,7 @@ bin/
 # VS Code
 .vscode/
 
-# Mac
+# macOS
 .DS_Store
 
 # Windows
@@ -45,7 +45,6 @@ ehthumbs.db
 Desktop.ini
 
 # Logs
-logs/
 *.log
 
 # Runtime data
@@ -72,7 +71,7 @@ node_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# Environment and secrets
 .env
 
 # Docker
@@ -81,4 +80,9 @@ node_modules/
 # Application specific
 helpText.txt
 *.token
-config.propertiesuser_settings.json
+config.properties
+user_settings.json
+
+# System
+*.swp
+*.swo
