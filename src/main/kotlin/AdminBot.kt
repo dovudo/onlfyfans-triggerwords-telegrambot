@@ -205,7 +205,7 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
             🤖 <b>OnlyFans Telegram Bot - Help</b>
             
             <b>Main commands:</b>
-            /token [account_name] <token> - Add OnlyFans token and connect
+            /token [account_name] <code>token</code> - Add OnlyFans token and connect
             /close - Close all sessions and delete data
             /reconnect - Forcefully reconnect to all accounts
             /help - Show this help
@@ -222,8 +222,8 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
             /removetrigger word - Remove one word from user triggers for all accounts
             
             <b>Examples:</b>
-            /token main eyJ0eXAi...
-            /token backup eyJ0eXAi...
+            /token main <code>eyJ0eXAi...</code>
+            /token backup <code>eyJ0eXAi...</code>
             /allmessages main on
             /triggers http whatsapp snapchat telegram
             /removetrigger telegram
@@ -298,7 +298,7 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
             
             sendTextMessage(chatId, "✅ OnlyFans token for account '$accountName' successfully added and connection established")
         } catch (e: Exception) {
-            sendTextMessage(chatId, "❌ Error adding token: ${e.message}\n\nUsage: /token [account_name] <token>")
+            sendTextMessage(chatId, "❌ Error adding token: ${e.message}\n\nUsage: /token [account_name] <code>token</code>")
         }
     }
 
