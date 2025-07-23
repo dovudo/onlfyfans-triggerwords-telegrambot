@@ -86,3 +86,4 @@ user_settings.json
 # System
 *.swp
 *.swo
+replacements.txt

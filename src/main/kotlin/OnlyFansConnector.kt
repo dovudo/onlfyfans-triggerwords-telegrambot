@@ -245,26 +245,32 @@ class OnlyFansConnector(
                 updateUserInfo(chatId, accountName, userInfo)
             }
             
-            // Check for links or payment systems
-            if (containsLinksOrPaymentSystems(cleanText)) {
+            // Check for links or payment systems (now returns triggers)
+            val triggers = containsLinksOrPaymentSystems(cleanText)
+            if (triggers.isNotEmpty()) {
                 if (fromUser != null) {
-                    val userId = fromUser.findValue("id")?.asLong()
-                    val name = fromUser.findValue("name")?.asText()
-                    val username = fromUser.findValue("username")?.asText()
-                    val isVerified = fromUser.findValue("isVerified")?.asBoolean()
-                    
-                    val notification = buildString {
-                        appendLine("🚨 <b>IMPORTANT MESSAGE!</b>")
-                        appendLine("👤 From: <code>$name</code> (@$username)")
-                        appendLine("🆔 ID: <code>$userId</code>")
-                        appendLine("✅ Verified: ${if (isVerified == true) "Yes" else "No"}")
-                        appendLine("🔗 Contains links or payment systems!")
-                        appendLine("\n📝 <b>Message text:</b>")
-                        appendLine("<code>$cleanText</code>")
+                    val canEarn = fromUser.findValue("canEarn")?.asBoolean() ?: false
+                    if (!canEarn) {
+                        val userId = fromUser.findValue("id")?.asLong()
+                        val name = fromUser.findValue("name")?.asText()
+                        val username = fromUser.findValue("username")?.asText()
+                        val isVerified = fromUser.findValue("isVerified")?.asBoolean()
+                        
+                        val notification = buildString {
+                            appendLine("🚨 <b>IMPORTANT MESSAGE!</b>")
+                            appendLine("👤 From: <code>$name</code> (@$username)")
+                            appendLine("🆔 ID: <code>$userId</code>")
+                            appendLine("✅ Verified: ${if (isVerified == true) "Yes" else "No"}")
+                            appendLine("🔗 Contains links or payment systems!")
+                            appendLine("<b>Triggers:</b> <code>${triggers.joinToString(", ")}</code>")
+                            appendLine("\n📝 <b>Message text:</b>")
+                            appendLine("<code>$cleanText</code>")
+                        }
+                        telegramMessageProvider(chatId, notification)
+                        println("[${getTimestamp()}] 🚨 Sent important message notification (triggers: ${triggers.joinToString(", ")})")
+                    } else {
+                        println("[${getTimestamp()}] 🚫 Message from model (canEarn == true) — alert not sent")
                     }
-                    
-                    telegramMessageProvider(chatId, notification)
-                    println("[${getTimestamp()}] 🚨 Sent important message notification")
                 }
             }
             
@@ -359,31 +365,41 @@ class OnlyFansConnector(
         }
     }
 
-    private fun containsLinksOrPaymentSystems(text: String): Boolean {
+    private fun containsLinksOrPaymentSystems(text: String): List<String> {
         val lowerText = text.lowercase()
-        
-        // Check for links
+        val triggers = mutableListOf<String>()
+
+        // Check for links (substring match)
         val linkPatterns = listOf(
-            "http://", "https://", "www.", ".com", ".org", ".net", ".ru", ".uk", ".de", ".fr", ".it", ".es",
+            "://", "https", "www.", ".com", ".org", ".net", ".ru", ".uk", ".de", ".fr", ".it", ".es",
             "t.me/", "telegram.me/", "instagram.com/", "facebook.com/", "twitter.com/", "youtube.com/",
             "snapchat.com/", "whatsapp.com/", "discord.gg/", "paypal.me/", "cash.app/", "venmo.com/"
         )
-        
-        // Check for payment systems
+        for (pattern in linkPatterns) {
+            if (lowerText.contains(pattern)) {
+                triggers.add(pattern)
+            }
+        }
+
+        // Check for payment systems (word boundary match)
         val paymentPatterns = listOf(
             "paypal", "stripe", "square", "cash app", "venmo", "zelle", "western union", "moneygram",
-            "bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "wallet", "bank transfer",
-            "wire transfer", "ach", "swift", "iban", "card number", "credit card", "debit card",
+            "bitcoin", "btc", "ethereum", "crypto", "cryptocurrency", "wallet", "bank transfer",
+            "wire transfer", "swift", "iban", "card number", "credit card", "debit card",
             "apple pay", "google pay", "samsung pay", "amazon pay", "alipay", "wechat pay"
         )
-        
-        // Check for links
-        val hasLinks = linkPatterns.any { pattern -> lowerText.contains(pattern) }
-        
-        // Check for payment systems
-        val hasPaymentSystems = paymentPatterns.any { pattern -> lowerText.contains(pattern) }
-        
-        return hasLinks || hasPaymentSystems
+        for (pattern in paymentPatterns) {
+            // Для составных паттернов ищем как фразу, для одиночных — по word boundary
+            val regex = if (pattern.contains(" ")) {
+                Regex("\\b" + Regex.escape(pattern) + "\\b", RegexOption.IGNORE_CASE)
+            } else {
+                Regex("\\b" + Regex.escape(pattern) + "\\b", RegexOption.IGNORE_CASE)
+            }
+            if (regex.containsMatchIn(lowerText)) {
+                triggers.add(pattern)
+            }
+        }
+        return triggers
     }
 
     private fun heartBeat(defaultClientWebSocketSession: DefaultClientWebSocketSession) {
@@ -419,3 +435,202 @@ class OnlyFansConnector(
             .trim() // Remove extra spaces
     }
 }
+
+/*
+    {
+	"api2_chat_message": {
+		"responseType": "message",
+		"text": "<p>How I’m new on this .. trying to get some tips on how it works.. <\/p>",
+		"giphyId": null,
+		"lockedText": false,
+		"isFree": true,
+		"price": 0,
+		"isMediaReady": true,
+		"mediaCount": 1,
+		"media": [
+			{
+				"id": 3950387999,
+				"type": "photo",
+				"convertedToVideo": false,
+				"canView": true,
+				"hasError": false,
+				"createdAt": null,
+				"isReady": true,
+				"files": {
+					"full": {
+						"url": "https:\/\/cdn2.onlyfans.com\/files\/8\/8f\/8fa1803b42ad65a162694ac21a38247c\/1170x1243_49d028cc592e3bb14fa60b24424f9a0a.jpg?Tag=2&u=0&Expires=1753351200&Signature=OKFmiQEXYU-ABGpOjgVqFENntY-SZyQEiY~u9oECZnmQ1rAh76EXayT4b3Ehpgem2dCDjH~68gigYi5fXlATdNlzCJafsnGgK0T9XU7DGL6qcRgPQvcfsDBJGtW03fbsEyJleKxmlNR3Arrwctv6dzuB2zO2qfGUD9pvj76-sRE0rggvL2H80TGwd3WcqInKMnHD5BbI9n11YaknE6RxVbfjFztX-LwpgWoMtYWp3k16LjWAIxGTuvU~gSp~1JsVnr-w4TUAxvW5KvOd2bubziu8KNTFtMfupK-q4tBGTiaG-T~6xyoyW112DpV8hmHQ5tEqR4lui9CwKO3qw~N5fg__&Key-Pair-Id=APKAUSX4CWPPATFK2DGD",
+						"width": 1170,
+						"height": 1243,
+						"size": 0,
+						"sources": []
+					},
+					"thumb": {
+						"url": "https:\/\/cdn2.onlyfans.com\/files\/7\/74\/740ff4b7436f61fd11b4da6ec5d0ea8e\/300x300_49d028cc592e3bb14fa60b24424f9a0a.jpg?Tag=2&u=0&Expires=1753351200&Signature=GSPYLyJY~CqKWFC0erLx~4lqS6luEWASrBs-aTUM6tWq13vjefpQh-pj7VrPjkTMGrXlhPV3AZ6oQ2-huMCiM9t2WHygCinWHOydq2JdmW9M7TVvFwtHGhLqdtNSADlCxM5bQpdSGWtyXh0hLzPrZX~zFf4MumolWAYx9vakuZwJAM8tudqE0x6nTUKGVGpv3~4oi0ig3DtLJs07JP3t2fhLH6mPaUp-OKW0ubC0mtq1Eg8OgP2Wz6aDnySNovr3u0OpMQljFrXRKhEAKjn6zpRqG6L0OUR5KohcJK2XkrX4Hia1a~B80wqrFK0ejayaIawEGQ3bOL4HWxbsD5PJVQ__&Key-Pair-Id=APKAUSX4CWPPATFK2DGD",
+						"width": 300,
+						"height": 300,
+						"size": 0
+					},
+					"preview": {
+						"url": "https:\/\/cdn2.onlyfans.com\/files\/b\/b2\/b2d7ab97d9ff9f5347b2a302ff990f98\/960x1020_49d028cc592e3bb14fa60b24424f9a0a.jpg?Tag=2&u=0&Expires=1753351200&Signature=afHpGZQ0SBYEmPa41e9SFtN2OQShvfrooJpSlZwe9A2UQ9EM2h-tpHV4N~yrVl7SM4zQdWFHItuYMBwhxjx3GiY4kG2XBQ5jmn6Vk1Hxj~slHEgAVLWtYZVHjfYklDruJRhPCT8Q9G6dLxTV0MDh4NeZ2DiFWFtg7MAeIKpQ6K8oSMwbf8m2YLoYc1bx53ezEUIypLsX8D9FuSX7XemhVX2IJF0O4OFD-blYxXnAnICoXPHlrLwsL0xBTIgxSKMPT7t~7ZRVcDmV-Pgoe5uZj8EAKIl0AoJy21wA-aygUNNAiDxhomCWsT7rgLH9xArGGMp8rXirhqOhxAu6T1p9mA__&Key-Pair-Id=APKAUSX4CWPPATFK2DGD",
+						"width": 960,
+						"height": 1020,
+						"size": 0
+					},
+					"squarePreview": {
+						"url": "https:\/\/cdn2.onlyfans.com\/files\/e\/ea\/eaf61485d01896ca162fc35071543424\/960x960_49d028cc592e3bb14fa60b24424f9a0a.jpg?Tag=2&u=0&Expires=1753351200&Signature=gffOiLi1O1kkXcHmO6asBzBjknYeyc2r0p383bRlB6EA76zPrYvEKnQ8rzU5XBGw3rN1-APTdUFYM7Y0WlHXpou4JBcDSC6VxNLbWPlO6hIV4ZMdfQ1n-ArgGZfYM69j7uKTkIfAdSkdM7Eq1CaQkueeBLle3wQqOjmrNOJ~JnSzDD4VP12qNct88L94yq9Lb85-q8dZNNgDMBbfuttmTHB7bcSKxUPWRNEi-MgF7btgMDzLLcsKtvv9j3Pr1484I4MXIJSFCH8UdgmgecHqkOTAhBy2JKirVMegPc0gSZMRmzadG6gH-H4mMDTpdUjoEBnnM6EFMZCBZYfcGXtvWA__&Key-Pair-Id=APKAUSX4CWPPATFK2DGD",
+						"width": 960,
+						"height": 960,
+						"size": 0
+					}
+				},
+				"duration": 0,
+				"hasCustomPreview": false,
+				"videoSources": {
+					"720": null,
+					"240": null
+				}
+			}
+		],
+		"previews": [],
+		"isTip": false,
+		"isReportedByMe": false,
+		"isCouplePeopleMedia": false,
+		"queueId": 26439068590,
+		"isMarkdownDisabled": true,
+		"fromUser": {
+			"view": "s",
+			"avatar": "https:\/\/public.onlyfans.com\/files\/c\/cn\/cnc\/cncrvunvotej7r4q7gobjvfn26gchiyj1753264394\/104080948\/avatar.jpg",
+			"avatarThumbs": {
+				"c50": "https:\/\/thumbs.onlyfans.com\/public\/files\/thumbs\/c50\/c\/cn\/cnc\/cncrvunvotej7r4q7gobjvfn26gchiyj1753264394\/104080948\/avatar.jpg",
+				"c144": "https:\/\/thumbs.onlyfans.com\/public\/files\/thumbs\/c144\/c\/cn\/cnc\/cncrvunvotej7r4q7gobjvfn26gchiyj1753264394\/104080948\/avatar.jpg"
+			},
+			"header": "https:\/\/public.onlyfans.com\/files\/i\/iw\/iw8\/iw82dbz98uzio4z7cae0k3a72dpll6eq1702634451\/104080948\/header.jpg",
+			"headerSize": {
+				"width": 1938,
+				"height": 1938
+			},
+			"headerThumbs": {
+				"w480": "https:\/\/thumbs.onlyfans.com\/public\/files\/thumbs\/w480\/i\/iw\/iw8\/iw82dbz98uzio4z7cae0k3a72dpll6eq1702634451\/104080948\/header.jpg",
+				"w760": "https:\/\/thumbs.onlyfans.com\/public\/files\/thumbs\/w760\/i\/iw\/iw8\/iw82dbz98uzio4z7cae0k3a72dpll6eq1702634451\/104080948\/header.jpg"
+			},
+			"id": 104080948,
+			"name": "ArmandoCharicata",
+			"username": "armandocharicata",
+			"canLookStory": true,
+			"canCommentStory": true,
+			"hasNotViewedStory": false,
+			"isVerified": true,
+			"canPayInternal": true,
+			"hasScheduledStream": false,
+			"hasStream": false,
+			"hasStories": false,
+			"tipsEnabled": false,
+			"tipsTextEnabled": true,
+			"tipsMin": 5,
+			"tipsMinInternal": 1,
+			"tipsMax": 200,
+			"canEarn": true,
+			"canAddSubscriber": true,
+			"subscribePrice": 0,
+			"displayName": "",
+			"notice": "",
+			"isPaywallRequired": true,
+			"isRestricted": false,
+			"canRestrict": true,
+			"subscribedBy": true,
+			"subscribedByExpire": false,
+			"subscribedByExpireDate": "2025-07-30T09:23:27+00:00",
+			"subscribedByAutoprolong": true,
+			"subscribedIsExpiredNow": false,
+			"currentSubscribePrice": 0,
+			"subscribedOn": null,
+			"subscribedOnExpiredNow": true,
+			"subscribedOnDuration": "5 months",
+			"listsStates": [
+				{
+					"id": "fans",
+					"type": "fans",
+					"name": "Fans",
+					"hasUser": false,
+					"canAddUser": false,
+					"cannotAddUserReason": null
+				},
+				{
+					"id": "following",
+					"type": "following",
+					"name": "Following",
+					"hasUser": true,
+					"canAddUser": false,
+					"cannotAddUserReason": "ALREADY_EXISTS"
+				},
+				{
+					"id": "rebill_off",
+					"type": "rebill_off",
+					"name": "Renew Off",
+					"hasUser": false,
+					"canAddUser": false,
+					"cannotAddUserReason": null
+				},
+				{
+					"id": "friends",
+					"type": "friends",
+					"name": "Friends",
+					"hasUser": false,
+					"canAddUser": true,
+					"cannotAddUserReason": null
+				},
+				{
+					"id": "muted",
+					"type": "muted",
+					"name": "Muted",
+					"hasUser": false,
+					"canAddUser": true,
+					"cannotAddUserReason": null
+				},
+				{
+					"id": "rebill_on",
+					"type": "rebill_on",
+					"name": "Renew On",
+					"hasUser": false,
+					"canAddUser": false,
+					"cannotAddUserReason": null
+				},
+				{
+					"id": "recent",
+					"type": "recent",
+					"name": "Recent (last 24 hours)",
+					"hasUser": false,
+					"canAddUser": false,
+					"cannotAddUserReason": "SYSTEM_LIST"
+				},
+				{
+					"id": "tagged",
+					"type": "tagged",
+					"name": "Tagged",
+					"hasUser": false,
+					"canAddUser": false,
+					"cannotAddUserReason": "SYSTEM_LIST"
+				}
+			],
+			"showMediaCount": true,
+			"lastSeen": "2025-07-23T09:58:10+00:00",
+			"canReport": true
+		},
+		"isFromQueue": true,
+		"canUnsendQueue": true,
+		"unsendSecondsQueue": 1000000,
+		"id": 6432457811894,
+		"isOpened": false,
+		"isNew": true,
+		"createdAt": "2025-07-23T10:01:22+00:00",
+		"changedAt": "2025-07-23T10:01:22+00:00",
+		"cancelSeconds": 86397,
+		"isLiked": false,
+		"canPurchase": false,
+		"canPurchaseReason": "free",
+		"canReport": true,
+		"canBePinned": true,
+		"isPinned": false
+	}
+}
+*/
