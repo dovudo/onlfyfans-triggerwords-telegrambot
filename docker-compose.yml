@@ -9,6 +9,8 @@ services:
       - JAVA_OPTS=-Xmx512m -Xms256m
       - TELEGRAM_BOT_TOKEN=6860199290:AAG0Co2whIh_yXOmduk50kLx8sce7BpB8XE
       - ./logs:/app/logs
+    volumes:
+      - ./user_settings.json:/app/user_settings.json
     networks:
       - bot-network
 

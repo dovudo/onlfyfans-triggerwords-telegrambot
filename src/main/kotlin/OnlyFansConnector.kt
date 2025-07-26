@@ -368,6 +368,9 @@ class OnlyFansConnector(
     private fun containsLinksOrPaymentSystems(text: String): List<String> {
         val lowerText = text.lowercase()
         val triggers = mutableListOf<String>()
+        
+        println("[${getTimestamp()}] 🔍 DEBUG: Checking text: '$text'")
+        println("[${getTimestamp()}] 🔍 DEBUG: Lowercase: '$lowerText'")
 
         // Check for links (substring match)
         val linkPatterns = listOf(
@@ -378,6 +381,7 @@ class OnlyFansConnector(
         for (pattern in linkPatterns) {
             if (lowerText.contains(pattern)) {
                 triggers.add(pattern)
+                println("[${getTimestamp()}] 🔍 DEBUG: Link pattern '$pattern' matched!")
             }
         }
 
@@ -397,8 +401,11 @@ class OnlyFansConnector(
             }
             if (regex.containsMatchIn(lowerText)) {
                 triggers.add(pattern)
+                println("[${getTimestamp()}] 🔍 DEBUG: Payment pattern '$pattern' matched!")
             }
         }
+        
+        println("[${getTimestamp()}] 🔍 DEBUG: Final triggers: ${triggers.joinToString(", ")}")
         return triggers
     }
 

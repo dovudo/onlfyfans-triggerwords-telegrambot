@@ -20,7 +20,7 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
     
     // Database for storing user responses
     private val userResponses: MutableMap<Long, String> = mutableMapOf()
-    private val defaultTriggerWords = listOf("http", "whatsapp", "whatapp", "https", "://", "snapchat")
+    private val defaultTriggerWords = listOf("http", "whatsapp", "whatapp", "https", "snapchat")
     private val helpInfoTextFile = File("helpText.txt")
 
     init {
@@ -399,9 +399,22 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
             }
             sendTextMessage(chatId, formattedMessage)
         } else {
-            val hasTrigger = account.triggerWords.any { trigger -> messageText.lowercase().contains(trigger.lowercase()) }
+            println("[${getTimestamp()}] 🔍 DEBUG: Checking trigger words for text: '$messageText'")
+            println("[${getTimestamp()}] 🔍 DEBUG: Account trigger words: ${account.triggerWords}")
+            
+            val hasTrigger = account.triggerWords.any { trigger -> 
+                val contains = messageText.lowercase().contains(trigger.lowercase())
+                if (contains) {
+                    println("[${getTimestamp()}] 🔍 DEBUG: Trigger word '$trigger' matched!")
+                }
+                contains
+            }
+            
             if (hasTrigger) {
                 println("[${getTimestamp()}] 🎯 Trigger word found in message")
+                val matchedTriggers = account.triggerWords.filter { messageText.lowercase().contains(it.lowercase()) }
+                println("[${getTimestamp()}] 🔍 DEBUG: Matched triggers: ${matchedTriggers.joinToString(", ")}")
+                
                 val formattedMessage = buildString {
                     appendLine("🎯 <b>MESSAGE WITH TRIGGER</b>")
                     appendLine("\uD83C\uDF10 Dialog with account: <code>$accountName</code>")
@@ -412,7 +425,7 @@ class AdminBot : TelegramLongPollingBot(System.getenv("TELEGRAM_BOT_TOKEN") ?: t
                     } else {
                         appendLine("👤 Sender: unknown")
                     }
-                    appendLine("\n🔍 Trigger words: <code>${account.triggerWords.filter { messageText.lowercase().contains(it.lowercase()) }.joinToString(", ")}</code>")
+                    appendLine("\n🔍 Trigger words: <code>${matchedTriggers.joinToString(", ")}</code>")
                     appendLine("\n📝 <b>Message text:</b>")
                     appendLine("<code>$messageText</code>")
                 }
