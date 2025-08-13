@@ -43,6 +43,10 @@ class OnlyFansConnector(
     private val maxReconnectAttempts = 5
     private val reconnectDelayMs = 5000L // 5 seconds between attempts
 
+    // Unknown event alert deduplication (per event type)
+    private val lastUnknownAlertAtByType = mutableMapOf<String, Long>()
+    private val unknownEventAlertCooldownMs = 30 * 60 * 1000L // 30 minutes
+
     fun start() {
         println("[${getTimestamp()}] 🔌 Starting connection to OnlyFans WebSocket for user $chatId")
         println("[${getTimestamp()}] 🌐 URL: $url")
@@ -212,7 +216,34 @@ class OnlyFansConnector(
                 }
                 // Other message types
                 else -> {
-                    println("[${getTimestamp()}] ❓ Unknown message type")
+                    // Determine top-level keys to identify event type
+                    val keys = jsonNode.fieldNames().asSequence().toList()
+                    val eventType = keys.firstOrNull() ?: "unknown"
+                    println("[${getTimestamp()}] ❓ Unknown message type: $eventType; keys=$keys")
+
+                    // Rate-limit alerts per event type
+                    val now = System.currentTimeMillis()
+                    val lastSent = lastUnknownAlertAtByType[eventType] ?: 0L
+                    val shouldAlert = now - lastSent >= unknownEventAlertCooldownMs
+
+                    if (shouldAlert) {
+                        lastUnknownAlertAtByType[eventType] = now
+                        val shortPayload = cleanHtmlTags(message).take(800)
+                        val alert = buildString {
+                            appendLine("⚠️ <b>Unknown WebSocket event</b>")
+                            appendLine("🏷️ Account: <code>$accountName</code>")
+                            appendLine("🧩 Type: <code>$eventType</code>")
+                            if (keys.isNotEmpty()) {
+                                appendLine("🔑 Keys: <code>${keys.joinToString(", ")}</code>")
+                            }
+                            appendLine("\n📝 Payload (truncated):")
+                            appendLine("<code>$shortPayload</code>")
+                            appendLine("\nNote: This may indicate a new event (e.g., token update).")
+                        }
+                        telegramMessageProvider(chatId, alert)
+                    } else {
+                        println("[${getTimestamp()}] ⏱️ Unknown event '$eventType' alert suppressed due to cooldown")
+                    }
                 }
             }
         } catch (e: Exception) {
