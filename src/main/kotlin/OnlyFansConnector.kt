@@ -230,9 +230,12 @@ class OnlyFansConnector(
             println("[${getTimestamp()}] 💬 Text message received: $rawText")
             println("[${getTimestamp()}] 🧹 Cleaned text: $cleanText")
             
-            // Save user info
+            // Determine message direction and handle only incoming (with fromUser)
             val fromUser = messageNode.findValue("fromUser")
+            val toUser = messageNode.findValue("toUser")
+
             if (fromUser != null) {
+                // Save user info for the actual sender
                 val userInfo = AdminBot.UserInfo(
                     id = fromUser.findValue("id")?.asLong() ?: 0L,
                     name = fromUser.findValue("name")?.asText() ?: "Unknown",
@@ -243,19 +246,17 @@ class OnlyFansConnector(
                     canEarn = fromUser.findValue("canEarn")?.asBoolean() ?: false
                 )
                 updateUserInfo(chatId, accountName, userInfo)
-            }
-            
-            // Check for links or payment systems (now returns triggers)
-            val triggers = containsLinksOrPaymentSystems(cleanText)
-            if (triggers.isNotEmpty()) {
-                if (fromUser != null) {
+
+                // Check for links or payment systems (now returns triggers)
+                val triggers = containsLinksOrPaymentSystems(cleanText)
+                if (triggers.isNotEmpty()) {
                     val canEarn = fromUser.findValue("canEarn")?.asBoolean() ?: false
                     if (!canEarn) {
                         val userId = fromUser.findValue("id")?.asLong()
                         val name = fromUser.findValue("name")?.asText()
                         val username = fromUser.findValue("username")?.asText()
                         val isVerified = fromUser.findValue("isVerified")?.asBoolean()
-                        
+
                         val notification = buildString {
                             appendLine("🚨 <b>IMPORTANT MESSAGE!</b>")
                             appendLine("👤 From: <code>$name</code> (@$username)")
@@ -272,10 +273,18 @@ class OnlyFansConnector(
                         println("[${getTimestamp()}] 🚫 Message from model (canEarn == true) — alert not sent")
                     }
                 }
+
+                // Check trigger words for regular messages (incoming only)
+                processMessageTriggerWords(chatId, cleanText, accountName)
+            } else if (toUser != null) {
+                // Outgoing message (toUser) — ignore to prevent stale sender mapping
+                val toUserName = toUser.findValue("name")?.asText()
+                val toUserId = toUser.findValue("id")?.asLong()
+                println("[${getTimestamp()}] ⤴️ Outgoing message to $toUserName (id=$toUserId) — ignored for notifications")
+            } else {
+                // Neither fromUser nor toUser present
+                println("[${getTimestamp()}] ⚠️ Message without fromUser/toUser — skipped")
             }
-            
-            // Check trigger words for regular messages
-            processMessageTriggerWords(chatId, cleanText, accountName)
         }
     }
 

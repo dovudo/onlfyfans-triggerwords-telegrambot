@@ -1,10 +1,14 @@
 # Gradle
+# Ignore local Gradle caches anywhere
+.gradle/
+
+# Ignore build outputs anywhere (root and modules)
+build/
+
+# Ignore project gradle directory by default, but keep wrapper
 /gradle/
-./gradle/**
-/build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+!gradle/wrapper/gradle-wrapper.properties
 
 # IntelliJ IDEA
 /.idea/
