@@ -46,6 +46,8 @@ class OnlyFansConnector(
     // Unknown event alert deduplication (per event type)
     private val lastUnknownAlertAtByType = mutableMapOf<String, Long>()
     private val unknownEventAlertCooldownMs = 30 * 60 * 1000L // 30 minutes
+    private val enableUnknownEventAlerts: Boolean =
+        (System.getenv("OF_ALERT_UNKNOWN_EVENTS") ?: "false").lowercase() in listOf("1", "true", "yes", "on")
 
     fun start() {
         println("[${getTimestamp()}] 🔌 Starting connection to OnlyFans WebSocket for user $chatId")
@@ -221,28 +223,32 @@ class OnlyFansConnector(
                     val eventType = keys.firstOrNull() ?: "unknown"
                     println("[${getTimestamp()}] ❓ Unknown message type: $eventType; keys=$keys")
 
-                    // Rate-limit alerts per event type
-                    val now = System.currentTimeMillis()
-                    val lastSent = lastUnknownAlertAtByType[eventType] ?: 0L
-                    val shouldAlert = now - lastSent >= unknownEventAlertCooldownMs
+                    if (enableUnknownEventAlerts) {
+                        // Rate-limit alerts per event type
+                        val now = System.currentTimeMillis()
+                        val lastSent = lastUnknownAlertAtByType[eventType] ?: 0L
+                        val shouldAlert = now - lastSent >= unknownEventAlertCooldownMs
 
-                    if (shouldAlert) {
-                        lastUnknownAlertAtByType[eventType] = now
-                        val shortPayload = cleanHtmlTags(message).take(800)
-                        val alert = buildString {
-                            appendLine("⚠️ <b>Unknown WebSocket event</b>")
-                            appendLine("🏷️ Account: <code>$accountName</code>")
-                            appendLine("🧩 Type: <code>$eventType</code>")
-                            if (keys.isNotEmpty()) {
-                                appendLine("🔑 Keys: <code>${keys.joinToString(", ")}</code>")
+                        if (shouldAlert) {
+                            lastUnknownAlertAtByType[eventType] = now
+                            val shortPayload = cleanHtmlTags(message).take(800)
+                            val alert = buildString {
+                                appendLine("⚠️ <b>Unknown WebSocket event</b>")
+                                appendLine("🏷️ Account: <code>$accountName</code>")
+                                appendLine("🧩 Type: <code>$eventType</code>")
+                                if (keys.isNotEmpty()) {
+                                    appendLine("🔑 Keys: <code>${keys.joinToString(", ")}</code>")
+                                }
+                                appendLine("\n📝 Payload (truncated):")
+                                appendLine("<code>$shortPayload</code>")
+                                appendLine("\nNote: This may indicate a new event (e.g., token update).")
                             }
-                            appendLine("\n📝 Payload (truncated):")
-                            appendLine("<code>$shortPayload</code>")
-                            appendLine("\nNote: This may indicate a new event (e.g., token update).")
+                            telegramMessageProvider(chatId, alert)
+                        } else {
+                            println("[${getTimestamp()}] ⏱️ Unknown event '$eventType' alert suppressed due to cooldown")
                         }
-                        telegramMessageProvider(chatId, alert)
                     } else {
-                        println("[${getTimestamp()}] ⏱️ Unknown event '$eventType' alert suppressed due to cooldown")
+                        println("[${getTimestamp()}] 🚫 Unknown event alerts disabled by configuration")
                     }
                 }
             }
